@@ -8,4 +8,4 @@ ALLOWED_ORIGINS = "https://yaseenis.com,https://www.yaseenis.com"
 [[d1_databases]]
 binding = "DB"
 database_name = "yakhaleelawndb"
-database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
+database_id = "a5a95622-e9b7-4054-8053-c17773abb511"
