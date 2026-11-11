@@ -7,6 +7,15 @@ function cors(request, env) {
   return {"Access-Control-Allow-Origin":ok?origin:"null","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type","Vary":"Origin"};
 }
 function validId(v){return typeof v==="string" && /^[a-zA-Z0-9-]{8,80}$/.test(v)}
+function cityFromRequest(request){
+ const cf=request.cf||{};
+ return [cf.city,cf.region,cf.country].filter(Boolean).join(", ").slice(0,100)||null;
+}
+async function touchPresence(env,visitorId,request){
+ const city=cityFromRequest(request);
+ if(city) await env.DB.prepare("INSERT INTO salawath_presence(visitor_id,city,last_seen) VALUES(?,?,datetime('now')) ON CONFLICT(visitor_id) DO UPDATE SET city=excluded.city,last_seen=datetime('now')").bind(visitorId,city).run();
+ else await env.DB.prepare("INSERT INTO salawath_presence(visitor_id,last_seen) VALUES(?,datetime('now')) ON CONFLICT(visitor_id) DO UPDATE SET last_seen=datetime('now')").bind(visitorId).run();
+}
 export default {
  async fetch(request,env){
   const h=cors(request,env);
@@ -19,13 +28,13 @@ export default {
     await env.DB.prepare("INSERT INTO salawath_events(visitor_id,amount) VALUES(?,?)").bind(b.visitorId,b.amount).run();
     await env.DB.prepare("UPDATE salawath_totals SET total=total+? WHERE id=1").bind(b.amount).run();
     const row=await env.DB.prepare("SELECT total FROM salawath_totals WHERE id=1").first();
-    await env.DB.prepare("INSERT INTO salawath_presence(visitor_id,last_seen) VALUES(?,datetime('now')) ON CONFLICT(visitor_id) DO UPDATE SET last_seen=datetime('now')").bind(b.visitorId).run();
+    await touchPresence(env,b.visitorId,request);
     return json({ok:true,total:row?.total||0,target:TARGET},200,h);
    }
    if(path==="/api/heartbeat" && request.method==="POST"){
     const b=await request.json();if(!validId(b.visitorId))return json({error:"invalid_input"},400,h);
-    await env.DB.prepare("INSERT INTO salawath_presence(visitor_id,last_seen) VALUES(?,datetime('now')) ON CONFLICT(visitor_id) DO UPDATE SET last_seen=datetime('now')").bind(b.visitorId).run();
-    return json({ok:true},200,h);
+    await touchPresence(env,b.visitorId,request);
+    return json({ok:true,city:cityFromRequest(request)},200,h);
    }
    if(path==="/api/location" && request.method==="POST"){
     const b=await request.json();if(!validId(b.visitorId)||!Number.isFinite(b.lat)||!Number.isFinite(b.lon)||Math.abs(b.lat)>90||Math.abs(b.lon)>180)return json({error:"invalid_input"},400,h);
