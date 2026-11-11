@@ -1,0 +1,11 @@
+name = "ya-khaleel-awn-api"
+main = "worker.js"
+compatibility_date = "2026-11-11"
+
+[vars]
+ALLOWED_ORIGINS = "https://yaseeninoor.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "YA_KHALEEL_AWN_DB"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
