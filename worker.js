@@ -34,7 +34,7 @@ export default {
    }
    if(path==="/api/heartbeat" && request.method==="POST"){
     const b=await request.json();if(!validId(b.visitorId))return json({error:"invalid_input"},400,h);
-    await touchPresence(env,b.visitorId,request);
+    await touchPresence(env,b.visitorId,request,b.name);
     return json({ok:true,city:cityFromRequest(request)},200,h);
    }
    if(path==="/api/location" && request.method==="POST"){
