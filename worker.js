@@ -32,6 +32,13 @@ export default {
     await touchPresence(env,b.visitorId,request,b.name);
     return json({ok:true,total:row?.total||0,target:TARGET},200,h);
    }
+   if(path==="/api/register" && request.method==="POST"){
+    const b=await request.json();
+    if(!validId(b.visitorId)||typeof b.name!=="string"||b.name.trim().length<2||b.name.trim().length>40)return json({error:"invalid_name"},400,h);
+    const name=b.name.trim().replace(/\\s+/g," ").slice(0,40);
+    await touchPresence(env,b.visitorId,request,name);
+    return json({ok:true,name},200,h);
+   }
    if(path==="/api/heartbeat" && request.method==="POST"){
     const b=await request.json();if(!validId(b.visitorId))return json({error:"invalid_input"},400,h);
     await touchPresence(env,b.visitorId,request,b.name);
