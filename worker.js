@@ -13,7 +13,7 @@ function cityFromRequest(request){
 }
 async function touchPresence(env,visitorId,request,name=null){
  const city=cityFromRequest(request);
- const displayName=typeof name==="string"?name.trim().replace(/\\s+/g," ").slice(0,40):"";
+ const displayName=typeof name==="string"?name.trim().replace(/\s+/g," ").slice(0,40):"";
  if(city) await env.DB.prepare("INSERT INTO salawath_presence(visitor_id,display_name,city,last_seen) VALUES(?,?,?,datetime('now')) ON CONFLICT(visitor_id) DO UPDATE SET display_name=COALESCE(NULLIF(excluded.display_name,''),salawath_presence.display_name),city=COALESCE(excluded.city,salawath_presence.city),last_seen=datetime('now')").bind(visitorId,displayName||null,city).run();
  else await env.DB.prepare("INSERT INTO salawath_presence(visitor_id,display_name,last_seen) VALUES(?,?,datetime('now')) ON CONFLICT(visitor_id) DO UPDATE SET display_name=COALESCE(NULLIF(excluded.display_name,''),salawath_presence.display_name),last_seen=datetime('now')").bind(visitorId,displayName||null).run();
 }
@@ -35,7 +35,7 @@ export default {
    if(path==="/api/register" && request.method==="POST"){
     const b=await request.json();
     if(!validId(b.visitorId)||typeof b.name!=="string"||b.name.trim().length<2||b.name.trim().length>40)return json({error:"invalid_name"},400,h);
-    const name=b.name.trim().replace(/\\s+/g," ").slice(0,40);
+    const name=b.name.trim().replace(/\s+/g," ").slice(0,40);
     await touchPresence(env,b.visitorId,request,name);
     return json({ok:true,name},200,h);
    }
@@ -61,7 +61,10 @@ export default {
     const recentVisitors=await env.DB.prepare("SELECT COALESCE(display_name,'பெயர் பதிவு செய்யவில்லை') name,COALESCE(city,'இடம் பகிரப்படவில்லை') city,last_seen lastSeen FROM salawath_presence WHERE last_seen>=datetime('now','-1 day') ORDER BY last_seen DESC LIMIT 30").all();
     const cities=await env.DB.prepare("SELECT city,COUNT(*) count FROM salawath_presence WHERE city IS NOT NULL AND last_seen>=datetime('now','-1 day') GROUP BY city ORDER BY count DESC LIMIT 15").all();
     const topUsers=await env.DB.prepare("SELECT COALESCE(p.display_name,'பெயர் பதிவு செய்யவில்லை') name,SUM(e.amount) count FROM salawath_events e LEFT JOIN salawath_presence p ON p.visitor_id=e.visitor_id WHERE date(e.created_at)=date('now') GROUP BY e.visitor_id ORDER BY count DESC LIMIT 10").all();
-    return json({total:total?.total||0,target:TARGET,daily:daily?.n||0,events:daily?.events||0,visitors:daily?.visitors||0,online:online?.n||0,onlineVisitors:onlineVisitors.results||[],recentVisitors:recentVisitors.results||[],cities:cities.results||[],topUsers:topUsers.results||[]},200,h);
+    const allTimeTopUsers=await env.DB.prepare("SELECT e.visitor_id visitorId,COALESCE(p.display_name,'பெயர் பதிவு செய்யவில்லை') name,SUM(e.amount) count FROM salawath_events e LEFT JOIN salawath_presence p ON p.visitor_id=e.visitor_id GROUP BY e.visitor_id ORDER BY count DESC LIMIT 50").all();
+    const requestedVisitorId=url.searchParams.get("visitorId")||"";
+    const personal=validId(requestedVisitorId)?await env.DB.prepare("SELECT COALESCE(SUM(amount),0) count FROM salawath_events WHERE visitor_id=?").bind(requestedVisitorId).first():null;
+    return json({total:total?.total||0,target:TARGET,daily:daily?.n||0,events:daily?.events||0,visitors:daily?.visitors||0,online:online?.n||0,onlineVisitors:onlineVisitors.results||[],recentVisitors:recentVisitors.results||[],cities:cities.results||[],topUsers:topUsers.results||[],allTimeTopUsers:allTimeTopUsers.results||[],personalCount:personal?.count||0},200,h);
    }
    return json({error:"not_found"},404,h);
   } catch(e){return json({error:"server_error",message:env.ENVIRONMENT==="development"?String(e):"Request failed"},500,h)}
