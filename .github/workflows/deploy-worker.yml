@@ -23,6 +23,13 @@ jobs:
           node-version: 22
       - name: Install Wrangler
         run: npm install --global wrangler
+      - name: Apply D1 schema safely
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          wrangler d1 execute yakhaleelawndb --remote --file=./schema.sql
+
       - name: Deploy Worker to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
