@@ -1,3 +1,4 @@
+// D1 schema is applied by the GitHub Actions deploy workflow before deployment.
 const TARGET = 70000;
 const json = (data, status=200, headers={}) => new Response(JSON.stringify(data), {status, headers:{"Content-Type":"application/json; charset=utf-8", ...headers}});
 function cors(request, env) {
